@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <declare-styleable name="FinalTextView">
+        <attr name="finalText" format="string" />
+        <attr name="finalTextColor" format="color" />
+        <attr name="finalTextSize" format="dimension" />
+        <attr name="finalFontFamily" format="string" />
+    </declare-styleable>
+</resources>

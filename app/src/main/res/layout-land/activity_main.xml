@@ -79,7 +79,6 @@
         android:id="@+id/drumView"
         android:layout_width="200dp"
         android:layout_height="200dp"
-        android:rotation="-90"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toStartOf="@+id/cardView"
         app:layout_constraintStart_toStartOf="parent"

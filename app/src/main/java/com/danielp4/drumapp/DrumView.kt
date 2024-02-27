@@ -19,6 +19,7 @@ class DrumView(
     private val startAngle = 0f
     private val sweepAngle = 360f / Constants.rainbow.keys.size
     private val paintBorder = Paint()
+    private var radius = 0f
 
     init {
         paintBorder.apply {
@@ -36,7 +37,6 @@ class DrumView(
     private fun drawDrum(canvas: Canvas) {
         val centerX = width / 2f
         val centerY = height / 2f
-        val radius = (width.coerceAtMost(height) / 2f)
         Constants.rainbow.keys.forEachIndexed { index, color ->
             paintDrum.color = context.getColor(color)
             canvas.drawArc(
@@ -63,6 +63,12 @@ class DrumView(
         }
 
 
+    }
+
+    fun updateRadius(newRadius: Float) {
+        radius = newRadius
+        requestLayout()
+        invalidate()
     }
 
 }

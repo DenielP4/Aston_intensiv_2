@@ -7,5 +7,6 @@ class DrumViewModel : ViewModel(){
 
     val result = MutableLiveData<Int>()
     val lastAngle = MutableLiveData<Float>()
+    val progressRadiusDrum = MutableLiveData<Int>()
 
 }

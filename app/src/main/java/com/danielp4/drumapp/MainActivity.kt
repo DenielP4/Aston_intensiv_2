@@ -1,8 +1,6 @@
 package com.danielp4.drumapp
 
-import android.content.Context
 import android.os.Bundle
-import android.util.Log
 import android.view.View
 import android.view.animation.Animation
 import android.view.animation.RotateAnimation
@@ -15,7 +13,6 @@ import com.danielp4.drumapp.databinding.ActivityMainBinding
 import com.squareup.picasso.MemoryPolicy
 import com.squareup.picasso.NetworkPolicy
 import com.squareup.picasso.Picasso
-import java.util.function.DoublePredicate
 import kotlin.math.abs
 import kotlin.random.Random
 
@@ -58,14 +55,13 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun startDrum() = with(binding) {
-
-        val duration = Random.nextLong(5000, 7001)
+        val timeDuration = Random.nextLong(5000, 7001)
         val angle: Float = (Random.nextInt(360, 3601)).toFloat()
         val pivotX: Float = drumView.width / 2f
         val pivotY: Float = drumView.height / 2f
 
-        if (binding.drumView.rotation != 0f) {
-            binding.drumView.rotation = 0f
+        if (drumView.rotation != 0f) {
+            drumView.rotation = 0f
         }
 
         val fromAngle =
@@ -77,26 +73,24 @@ class MainActivity : AppCompatActivity() {
             pivotY
         )
         viewModel.lastAngle.value = angle % 360
-        animation.duration = duration
-        animation.fillAfter = true
-        animation.setAnimationListener(object : Animation.AnimationListener {
-            override fun onAnimationStart(animation: Animation?) {
-                isAnimating = true
-            }
-
-            override fun onAnimationRepeat(animation: Animation?) {
-
-            }
-
-            override fun onAnimationEnd(animation: Animation?) {
-                isAnimating = false
-                resultAngle = 360 - (angle % 360)
-                getItem(resultAngle)
-            }
-        })
-
-        drumView.startAnimation(animation)
-
+        animation.apply {
+            duration = timeDuration
+            fillAfter = true
+            setAnimationListener(
+                object : Animation.AnimationListener {
+                    override fun onAnimationStart(animation: Animation?) {
+                        isAnimating = true
+                    }
+                    override fun onAnimationRepeat(animation: Animation?) {}
+                    override fun onAnimationEnd(animation: Animation?) {
+                        isAnimating = false
+                        resultAngle = 360 - (angle % 360)
+                        getItem(resultAngle)
+                    }
+                }
+            )
+            drumView.startAnimation(animation)
+        }
     }
 
     fun checkAngle(lastAngle: Float?): Boolean {
@@ -116,16 +110,11 @@ class MainActivity : AppCompatActivity() {
                     .memoryPolicy(MemoryPolicy.NO_CACHE)
                     .into(imView)
                 imView.visibility = View.VISIBLE
-                Log.d("MyLog", "IMAGE_URL")
             }
-
             TEXT -> {
                 imView.visibility = View.GONE
                 finalTextView.visibility = View.VISIBLE
-                Log.d("MyLog", "TEXT")
             }
-
-            else -> {}
         }
     }
 
@@ -138,11 +127,11 @@ class MainActivity : AppCompatActivity() {
         return minRadius + ratio * (maxRadius - minRadius)
     }
 
-    private fun updateDrumSize(progress: Int) {
+    private fun updateDrumSize(progress: Int) = with(binding) {
         val newRadius = calculateNewRadius(progress)
-        Log.d("MyLog", "$newRadius")
-        binding.drumView.updateRadius(newRadius)
-        binding.drumView.invalidate()
+        drumView.apply {
+            updateRadius(newRadius)
+        }
     }
 
     private fun setupSeekBarListener() {
@@ -150,16 +139,13 @@ class MainActivity : AppCompatActivity() {
             override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
                 updateDrumSize(progress)
             }
-
-            override fun onStartTrackingTouch(seekBar: SeekBar?) {
-
-            }
-
+            override fun onStartTrackingTouch(seekBar: SeekBar?) {}
             override fun onStopTrackingTouch(seekBar: SeekBar?) {
                 viewModel.progressRadiusDrum.value = seekBar?.progress
             }
         })
     }
+
     override fun onResume() {
         super.onResume()
         if (!checkAngle(viewModel.lastAngle.value)) {

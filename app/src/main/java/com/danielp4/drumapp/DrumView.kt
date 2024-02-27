@@ -4,10 +4,7 @@ import android.content.Context
 import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Paint
-import android.os.Bundle
-import android.os.Parcelable
 import android.util.AttributeSet
-import android.util.Log
 import android.view.View
 
 class DrumView(
@@ -35,40 +32,17 @@ class DrumView(
     }
 
     private fun drawDrum(canvas: Canvas) {
-        val centerX = width / 2f
-        val centerY = height / 2f
+        val (centerX, centerY) = calculateCenter()
         Constants.rainbow.keys.forEachIndexed { index, color ->
             paintDrum.color = context.getColor(color)
-            canvas.drawArc(
-                centerX - radius,
-                centerY - radius,
-                centerX + radius,
-                centerY + radius,
-                startAngle + index * sweepAngle,
-                sweepAngle,
-                true,
-                paintDrum
-            )
-
-            canvas.drawArc(
-                centerX - radius,
-                centerY - radius,
-                centerX + radius,
-                centerY + radius,
-                startAngle + index * sweepAngle,
-                sweepAngle,
-                true,
-                paintBorder
-            )
+            canvas.drawDrum(canvas, radius, centerX, centerY, startAngle, index, sweepAngle, paintDrum)
+            canvas.drawDrum(canvas, radius, centerX, centerY, startAngle, index, sweepAngle, paintBorder)
         }
-
-
     }
 
     fun updateRadius(newRadius: Float) {
         radius = newRadius
         requestLayout()
-        invalidate()
     }
 
 }

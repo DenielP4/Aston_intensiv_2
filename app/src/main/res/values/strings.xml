@@ -1,0 +1,7 @@
+<resources>
+    <string name="app_name">DrumApp</string>
+    <string name="b_reset">Reset</string>
+    <string name="b_start">Start</string>
+    <string name="url">https://placekitten.com/640/360</string>
+    <string name="text">TEXT</string>
+</resources>

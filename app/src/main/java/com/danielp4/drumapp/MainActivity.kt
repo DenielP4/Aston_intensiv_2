@@ -1,9 +1,13 @@
 package com.danielp4.drumapp
 
+import android.animation.Animator
+import android.animation.ObjectAnimator
+import android.animation.ValueAnimator
 import android.os.Bundle
+import android.os.SystemClock
+import android.util.Log
 import android.view.View
-import android.view.animation.Animation
-import android.view.animation.RotateAnimation
+import android.view.animation.LinearInterpolator
 import android.widget.SeekBar
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
@@ -20,10 +24,13 @@ import kotlin.random.Random
 class MainActivity : AppCompatActivity() {
 
     lateinit var binding: ActivityMainBinding
-    var lastAngle = -1f
     var isAnimating = false
     private val sweepAngle = 360f / Constants.rainbow.keys.size
     var resultAngle = 0f
+
+    var timeStartAnim: Long = 0
+
+    private var animator: ObjectAnimator? = null
 
     private val viewModel: DrumViewModel by viewModels()
 
@@ -34,9 +41,8 @@ class MainActivity : AppCompatActivity() {
         setupSeekBarListener()
         binding.apply {
             bStart.setOnClickListener {
-                if (!isAnimating) {
-                    startDrum()
-                }
+                isAnimating = true
+                startDrum()
             }
             bReset.setOnClickListener {
                 resetResult()
@@ -55,42 +61,77 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun startDrum() = with(binding) {
-        val timeDuration = Random.nextLong(5000, 7001)
-        val angle: Float = (Random.nextInt(360, 3601)).toFloat()
-        val pivotX: Float = drumView.width / 2f
-        val pivotY: Float = drumView.height / 2f
-
+        viewModel.duration.value = Random.nextLong(5000, 7001)
+        viewModel.toAngle.value = Random.nextInt(360, 720).toFloat()
         if (drumView.rotation != 0f) {
             drumView.rotation = 0f
         }
-
-        val fromAngle =
-            if (checkAngle(viewModel.lastAngle.value)) 0f else viewModel.lastAngle.value!!
-        val animation = RotateAnimation(
-            fromAngle,
-            angle,
-            pivotX,
-            pivotY
-        )
-        viewModel.lastAngle.value = angle % 360
-        animation.apply {
-            duration = timeDuration
-            fillAfter = true
-            setAnimationListener(
-                object : Animation.AnimationListener {
-                    override fun onAnimationStart(animation: Animation?) {
-                        isAnimating = true
-                    }
-                    override fun onAnimationRepeat(animation: Animation?) {}
-                    override fun onAnimationEnd(animation: Animation?) {
-                        isAnimating = false
-                        resultAngle = 360 - (angle % 360)
-                        getItem(resultAngle)
-                    }
+        val fromAngle = if (checkAngle(viewModel.fromAngle.value)) 0f else viewModel.fromAngle.value!!
+        viewModel.fromAngle.value = viewModel.toAngle.value!! % 360
+        animator = ObjectAnimator.ofFloat(binding.drumView, "rotation", fromAngle, viewModel.toAngle.value!!).apply {
+            duration = viewModel.duration.value!!
+            interpolator = LinearInterpolator()
+            addListener(object : Animator.AnimatorListener {
+                override fun onAnimationStart(p0: Animator) {
+                    timeStartAnim = SystemClock.elapsedRealtime()
+                    viewModel.isPaused.value = false
                 }
-            )
-            drumView.startAnimation(animation)
+                override fun onAnimationEnd(p0: Animator) {
+                    isAnimating = false
+                    resultAngle = 360 - (viewModel.toAngle.value!! % 360)
+                    getItem(resultAngle)
+                }
+                override fun onAnimationCancel(p0: Animator) {}
+                override fun onAnimationRepeat(p0: Animator) {}
+            })
+            addPauseListener(object : Animator.AnimatorPauseListener {
+                override fun onAnimationPause(p0: Animator) {
+                    viewModel.fromAngle.value = drumView.rotation
+                    viewModel.isPaused.value = true
+                    viewModel.duration.value = viewModel.duration.value!! - (SystemClock.elapsedRealtime() - timeStartAnim)
+                }
+                override fun onAnimationResume(p0: Animator) {}
+            })
         }
+        animator?.start()
+    }
+
+    private fun resumeDrum() = with(binding){
+        if (drumView.rotation != 0f) {
+            drumView.rotation = 0f
+        }
+        viewModel.fromAngle.value = viewModel.toAngle.value!! % 360
+        animator = ObjectAnimator.ofFloat(binding.drumView, "rotation", viewModel.fromAngle.value!!, viewModel.toAngle.value!!).apply {
+            duration = viewModel.duration.value!!
+            interpolator = LinearInterpolator()
+            addUpdateListener(object : ValueAnimator.AnimatorUpdateListener {
+                override fun onAnimationUpdate(p0: ValueAnimator) {
+                }
+            })
+            addListener(object : Animator.AnimatorListener {
+                override fun onAnimationStart(p0: Animator) {
+                    timeStartAnim = SystemClock.elapsedRealtime()
+                    viewModel.isPaused.value = false
+                }
+                override fun onAnimationEnd(p0: Animator) {
+                    isAnimating = false
+                    resultAngle = 360 - (viewModel.toAngle.value!! % 360)
+                    getItem(resultAngle)
+                }
+                override fun onAnimationCancel(p0: Animator) {}
+                override fun onAnimationRepeat(p0: Animator) {}
+            })
+            addPauseListener(object : Animator.AnimatorPauseListener {
+                override fun onAnimationPause(p0: Animator) {
+                    viewModel.fromAngle.value = drumView.rotation
+                    viewModel.isPaused.value = true
+                    viewModel.duration.value = viewModel.duration.value!! - (SystemClock.elapsedRealtime() - timeStartAnim)
+                }
+                override fun onAnimationResume(p0: Animator) {}
+            })
+        }
+        animator?.start()
+
     }
 
     fun checkAngle(lastAngle: Float?): Boolean {
@@ -148,10 +189,15 @@ class MainActivity : AppCompatActivity() {
 
     override fun onResume() {
         super.onResume()
-        if (!checkAngle(viewModel.lastAngle.value)) {
-            val angle = 360 - (viewModel.lastAngle.value!! % 360)
-            getItem(angle)
-            binding.drumView.rotation = viewModel.lastAngle.value!!
+        if (viewModel.isPaused.value == true){
+            binding.drumView.rotation = viewModel.fromAngle.value!!
+            resumeDrum()
+        } else {
+            if (!checkAngle(viewModel.fromAngle.value)) {
+                val angle = 360 - (viewModel.fromAngle.value!! % 360)
+                getItem(angle)
+                binding.drumView.rotation = viewModel.fromAngle.value!!
+            }
         }
         if (viewModel.progressRadiusDrum.value != null) {
             updateDrumSize(viewModel.progressRadiusDrum.value!!)
@@ -161,4 +207,10 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+
+
+    override fun onStop() {
+        super.onStop()
+        animator?.pause()
+    }
 }
